@@ -1,0 +1,14 @@
+# Hindi copy review checklist
+
+The app now has a lightweight English/Hindi switch. The Hindi strings are a usable first draft, not a professionally reviewed translation. Edit Hindi values in [the dictionary](../app/js/i18n.js); the keys below make the relevant copy easy to find. English source wording and where it appears are included so each phrase can be reviewed in context.
+
+## Recommended careful review
+
+1. **Teaching and calibration instructions** — these affect whether the user records a valid voice template. Review `teachLead`, `teachTip1`–`teachTip3`, `stayQuiet`, `teachHint`, `finishNth`, `chantOnce`, `waitingPause`, `pauseMoveOn`, `learnedBody`, `reasonNoVoice*`, `reasonShort*`, `reasonLittle*`, `reasonReps*`, and `reasonDiffer*`. These are displayed in the Teach flow in [app/index.html](../app/index.html) and generated in [app/js/app.js](../app/js/app.js).
+2. **Privacy and microphone permission guidance** — accuracy matters. Review `privacyTeach`, `privacySettings`, `micDeniedBody`, `micPermissionStep1`–`micPermissionStep3`, `iphoneMic`, `secureMicBody`, `noMicBody`, `micEndedBody`, and `micGenericBody`. Browser setting names such as “Allow” are deliberately left in English because they may match the device’s actual browser UI. See [app/js/app.js](../app/js/app.js).
+3. **Japa-specific vocabulary** — choose consistent, natural terms for *mala*, *bead*, *chant/jap*, *repetition*, and *streak*. Check `malaSize`, `mala`, `malaComplete`, `beadClick`, `completedShare`, `chantLabel`, `chantsLabel`, and `streakDays`. Product behavior should remain unchanged when wording is refined.
+4. **Detection explanations** — these describe the matching algorithm, not just ordinary UI. Review `borderline`, `noCount`, `tooShortMatch`, `detailsCounted`, `closest`, `score`, `needs`, and `listeningThreshold`. The expanded technical diagnostic readout is still English in [app/js/miccheck.js](../app/js/miccheck.js); it can remain technical English or be translated separately after review.
+5. **Completion card and share message** — check the public-facing phrasing, Hindi line wrapping, and Devanagari font rendering. Review `completedShare`, `inMinutes`, `streakDays`, `shareFooter`, `chantLabel`, and `chantsLabel`, rendered by [app/js/share.js](../app/js/share.js).
+
+The language setting and translation application are implemented in [app/js/i18n.js](../app/js/i18n.js), [app/js/storage.js](../app/js/storage.js), and [app/js/app.js](../app/js/app.js). Mantra names and user-entered mantra text intentionally remain unchanged when the interface language changes.
+In Hindi mode, Plus Jakarta Sans and Cormorant Garamond remain first in their respective stacks, with Tiro Devanagari Sanskrit next. Browsers choose fonts per glyph, so Latin letters and digits keep their intended fonts while Devanagari glyphs use Tiro.

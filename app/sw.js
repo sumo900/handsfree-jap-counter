@@ -4,12 +4,12 @@
    the previous cache-first worker pinned users to old code forever),
    falling back to the cache when offline. Fonts: cache-first.
    ============================================================ */
-const CACHE = "jap-counter-v8";
+const CACHE = "jap-counter-v9";
 const ASSETS = [
   "./", "./index.html", "./css/styles.css", "./manifest.json",
-  "./js/storage.js", "./js/themes.js", "./js/miccheck.js", "./js/chime.js",
+  "./js/storage.js", "./js/i18n.js", "./js/themes.js", "./js/miccheck.js", "./js/chime.js",
   "./js/dsp.js", "./js/audio.js", "./js/pcm-worklet.js", "./js/share.js", "./js/app.js",
-  "./icons/icon-192.png", "./icons/icon-512.png"
+  "./icons/icon-192.webp", "./icons/icon-512.webp"
 ];
 
 self.addEventListener("install", (e) => {

@@ -23,7 +23,7 @@ const CHROME = process.env.CHROME || "/Applications/Google Chrome.app/Contents/M
 const mode = process.argv[2] || "all";
 let failures = 0;
 
-const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png" };
+const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".webp": "image/webp" };
 function serve() {
   return new Promise((resolve) => {
     const srv = http.createServer((req, res) => {
@@ -93,6 +93,13 @@ async function testUI(browser) {
   ok("…and 'of 21'", /of 21/.test(await text(page, "#count-sub")));
   await page.click('.swatch[data-theme="obsidian"]');
   ok("theme switches", (await page.evaluate(() => document.documentElement.dataset.theme)) === "obsidian");
+  await page.click('#seg-language [data-v="hi"]');
+  ok("Hindi changes interface and document language", await page.evaluate(() => document.documentElement.lang === "hi" && document.querySelector("#settings-title").textContent === "सेटिंग्स"));
+  await page.reload({ waitUntil: "networkidle0" });
+  ok("language preference survives reload", await page.evaluate(() => document.documentElement.lang === "hi" && document.querySelector("#btn-reset").textContent === "गिनती रीसेट करें"));
+  await page.click("#btn-settings");
+  await page.click('#seg-language [data-v="en"]');
+  ok("English can be selected again", await page.evaluate(() => document.documentElement.lang === "en" && document.querySelector("#settings-title").textContent === "Settings"));
   await page.keyboard.press("Escape");
   await sleep(50);
   ok("Escape closes the sheet", !(await visible(page, "#sheet-settings")));

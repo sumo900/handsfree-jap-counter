@@ -6,6 +6,7 @@
   "use strict";
   const $ = (s) => document.querySelector(s);
   const DSP = window.MantraDSP;
+  const tr = (key, values) => I18n.t(key, values);
 
   const PRESETS = [
     { name: "Om Namah Shivaya",       dev: "ॐ नमः शिवाय" },
@@ -98,10 +99,10 @@
     if (bump) { el.count.classList.remove("bump"); void el.count.offsetWidth; el.count.classList.add("bump"); }
     if (S.target > 0) {
       el.countSub.textContent = S.target > 108
-        ? `of ${S.target} · mala ${Math.min(Math.floor(count / 108) + 1, Math.ceil(S.target / 108))}`
-        : `of ${S.target}`;
+        ? tr("countOfMala", { target: S.target, mala: Math.min(Math.floor(count / 108) + 1, Math.ceil(S.target / 108)) })
+        : tr("countOf", { target: S.target });
     } else {
-      el.countSub.textContent = count >= 108 ? `mala ${Math.floor(count / 108) + (count % 108 ? 1 : 0)}` : "no limit";
+      el.countSub.textContent = count >= 108 ? tr("mala", { mala: Math.floor(count / 108) + (count % 108 ? 1 : 0) }) : tr("noLimit");
     }
   }
 
@@ -109,13 +110,19 @@
     el.mantraName.textContent = S.mantra;
     el.mantraDev.textContent = devOf(S.mantra);
     document.querySelectorAll(".teach-mantra").forEach((n) => { n.textContent = S.mantra; });
+    const intro = $("#teach-intro-lead");
+    if (intro) intro.innerHTML = tr("teachLead", { mantra: escapeHTML(S.mantra) });
+  }
+
+  function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
   }
 
   function renderStreak() {
     const st = Store.Streak.stats();
     el.streak.hidden = st.streak < 1;
     el.streakNum.textContent = String(st.streak);
-    el.streak.title = `${st.streak}-day streak · ${st.today} chants today`;
+    el.streak.title = tr("streakTitle", { streak: st.streak, today: st.today });
   }
 
   function setStatus(text, state) {
@@ -124,18 +131,19 @@
   }
 
   function idleStatus() {
-    if (mode === "done") return setStatus("Mala complete", "idle");
-    if (mode === "paused") return setStatus("Paused", "paused");
-    if (!profile()) return setStatus("Teach this mantra once to begin", "idle");
-    setStatus(count > 0 ? "Tap start to continue" : "Tap start and chant", "idle");
+    if (mode === "done") return setStatus(tr("malaComplete"), "idle");
+    if (mode === "paused") return setStatus(tr("paused"), "paused");
+    if (!profile()) return setStatus(tr("teachOnce"), "idle");
+    setStatus(count > 0 ? tr("tapContinue") : tr("tapChant"), "idle");
   }
 
   function renderMain() {
     const on = mode === "running";
     el.main.classList.toggle("is-on", on);
-    const label = on ? "Pause" : mode === "paused" ? "Resume" : mode === "done" ? "New mala" : profile() ? "Start" : "Teach";
+    const label = on ? tr("pause") : mode === "paused" ? tr("resume") : mode === "done" ? tr("newMala") : profile() ? tr("start") : tr("teach");
     el.mainLabel.textContent = label;
-    el.main.setAttribute("aria-label", on ? "Pause listening" : label === "Teach" ? "Teach this mantra" : label + " chanting");
+    const ariaLabel = on ? tr("pauseListening") : !profile() ? tr("teachThis") : mode === "paused" ? tr("resumeChanting") : mode === "done" ? tr("newMalaAria") : tr("mainStartAria");
+    el.main.setAttribute("aria-label", ariaLabel);
   }
 
   function setDetails(text) {
@@ -192,7 +200,7 @@
     const p = profile();
     if (!p) { openTeach(); return; }
     if (mode === "done" || (S.target > 0 && count >= S.target)) newMala();
-    setStatus("Starting microphone…", "idle");
+    setStatus(tr("startingMic"), "idle");
     try {
       await AudioEngine.startCounting(p, { sensitivity: S.sensitivity }, {
         onCount, onLevel, onEvent,
@@ -204,8 +212,8 @@
     if (!startedAt) startedAt = Date.now();
     saveSession();
     renderMain();
-    setStatus("Listening", "listening");
-    setDetails(`listening · match threshold ${(p.accept * S.sensitivity).toFixed(2)}`);
+    setStatus(tr("listening"), "listening");
+    setDetails(tr("listeningThreshold", { threshold: (p.accept * S.sensitivity).toFixed(2) }));
     lockScreen();
   }
 
@@ -219,20 +227,20 @@
     unlockScreen();
     saveSession();
     renderMain();
-    if (reason === "idle") setStatus("Paused after 2 minutes of silence", "paused");
+    if (reason === "idle") setStatus(tr("pausedSilence"), "paused");
     else idleStatus();
   }
 
   function onCount(ev) {
     for (let i = 0; i < ev.n; i++) increment(true);
-    if (ev.score != null) setDetails(`✓ counted · score ${ev.score.toFixed(2)} (≤ ${ev.accept.toFixed(2)})${ev.n > 1 ? " · +" + (ev.n - 1) + " confirmed" : ""}`);
+    if (ev.score != null) setDetails(tr("detailsCounted", { score: ev.score.toFixed(2), accept: ev.accept.toFixed(2) }) + (ev.n > 1 ? tr("confirmed", { count: ev.n - 1 }) : ""));
   }
 
   function onEvent(e) {
-    const why = e.type === "held" ? "borderline — will count if the next one matches"
-      : e.type === "miss" ? "no count" : e.type;
-    const sc = e.score === Infinity || e.score == null ? "no full-length match (too short?)"
-      : `${e.type === "miss" ? "closest" : "score"} ${e.score.toFixed(2)} (needs ≤ ${e.accept.toFixed(2)})`;
+    const why = e.type === "held" ? tr("borderline")
+      : e.type === "miss" ? tr("noCount") : e.type;
+    const sc = e.score === Infinity || e.score == null ? tr("tooShortMatch")
+      : `${e.type === "miss" ? tr("closest") : tr("score")} ${e.score.toFixed(2)} (${tr("needs", { accept: e.accept.toFixed(2) })})`;
     setDetails(`${why} · ${sc}`);
   }
 
@@ -242,9 +250,9 @@
     el.mala.style.setProperty("--lvl", lvl.toFixed(3));
     el.repArc.style.strokeDashoffset = String(Math.round(100 - l.progress * 100));
     if (mode !== "running" || Date.now() < statusHold) return;
-    if (l.deadMic) setStatus("No sound from the microphone — is it muted?", "warn");
-    else if (l.speech) setStatus("Hearing you…", "hearing");
-    else setStatus("Listening", "listening");
+    if (l.deadMic) setStatus(tr("noMicSound"), "warn");
+    else if (l.speech) setStatus(tr("hearing"), "hearing");
+    else setStatus(tr("listening"), "listening");
   }
 
   /* ---------------- counting ---------------- */
@@ -259,11 +267,11 @@
     saveSession();
     if (S.tickOn) Chime.bead();
     if (S.vibrateOn) Chime.vibrate([22]);
-    if (fromVoice) { statusHold = Date.now() + 700; setStatus(`Counted ${count}`, "hearing"); }
+    if (fromVoice) { statusHold = Date.now() + 700; setStatus(tr("counted", { count }), "hearing"); }
     if (S.target > 0 && count >= S.target) complete();
     else if (count % 108 === 0) {          // a full mala inside 1008 / no-limit
       if (S.soundOn) Chime.ring(3, 0.35);
-      toast(`Mala ${count / 108} complete`);
+      toast(tr("malaNComplete", { mala: count / 108 }));
     }
   }
 
@@ -288,6 +296,21 @@
   }
 
   /* ---------------- completion ---------------- */
+  let doneData = null, doneCard = null;
+
+  function renderCompletion(data) {
+    $("#done-body").textContent = tr("doneBody", {
+      count: data.count,
+      mantra: data.mantra,
+      minutes: data.minutes ? ` · ${tr("inMinutes", { minutes: data.minutes })}` : "",
+      streak: data.streak > 1 ? ` · ${tr("streakDays", { count: data.streak })}` : ""
+    });
+    doneData = data;
+    doneCard = Share.buildCard(data);
+    const prev = $("#card-preview");
+    prev.textContent = ""; prev.appendChild(doneCard);
+  }
+
   function complete() {
     if (mode === "running") { AudioEngine.pause(); unlockScreen(); }
     AudioEngine.release();
@@ -301,15 +324,10 @@
     saveSession();
     const st = Store.Streak.stats();
     const minutes = startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 60000)) : 0;
-    $("#done-body").textContent = `${count} × ${S.mantra}` + (minutes ? ` · ${minutes} min` : "") + (st.streak > 1 ? ` · ${st.streak}-day streak` : "");
     const data = { theme: Themes.byId(S.theme), mantra: S.mantra, count, minutes, streak: st.streak, beads: beadsFor() };
-    const card = Share.buildCard(data);
-    const prev = $("#card-preview");
-    prev.textContent = ""; prev.appendChild(card);
-    doneData = data; doneCard = card;
+    renderCompletion(data);
     setTimeout(() => showSheet("#sheet-done"), 600);
   }
-  let doneData = null, doneCard = null;
 
   /* ---------------- teach (calibration) ---------------- */
   const teach = $("#sheet-teach");
@@ -339,9 +357,9 @@
     $("#btn-teach-done").disabled = true;
     $("#btn-teach-done").hidden = true;
     setRepSteps(0, false);
-    setRec("ready", "Get ready");
-    $("#teach-step-title").textContent = "Get ready…";
-    $("#teach-step-sub").textContent = "Stay quiet for a moment while I listen to the room.";
+    setRec("ready", tr("getReady"));
+    $("#teach-step-title").textContent = tr("getReadyEllipsis");
+    $("#teach-step-sub").textContent = tr("stayQuiet");
     $("#teach-hint").textContent = "";
     $("#rec-time").textContent = "0:00";
     try {
@@ -367,7 +385,7 @@
       items[i].classList.toggle("now", i === captured);
       items[i].classList.toggle("hearing", i === captured && hearing);
     }
-    $("#rep-steps").setAttribute("aria-label", `${captured} of 3 repetitions recorded`);
+    $("#rep-steps").setAttribute("aria-label", tr("repetitionsRecorded", { count: captured }));
   }
 
   const ORD = ["first", "second", "third"];
@@ -378,30 +396,30 @@
     if (waveHist.length > 300) waveHist.shift();
     if (waveHist.length % 2 === 0) drawWave();
     if (c.phase === "settle") {
-      setRec("ready", "Get ready");
-      $("#teach-step-title").textContent = `Get ready… ${Math.ceil(c.settleLeft)}`;
+      setRec("ready", tr("getReady"));
+      $("#teach-step-title").textContent = tr("getReadyCount", { seconds: Math.ceil(c.settleLeft) });
       return;
     }
     if (!teachT0) { teachT0 = Date.now(); Chime.vibrate([40]); }
     const secs = Math.floor((Date.now() - teachT0) / 1000);
     $("#rec-time").textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
-    setRec(c.hearing ? "hearing" : "rec", c.hearing ? "Recording · hearing you" : "Recording");
+    setRec(c.hearing ? "hearing" : "rec", tr(c.hearing ? "recordingHearing" : "recording"));
     setRepSteps(c.captured, c.hearing);
     $("#btn-teach-done").disabled = c.captured < 2;
     $("#btn-teach-done").hidden = c.captured < 2;
     if (Date.now() < gotItUntil) return;
     const n = Math.min(c.captured, 2);
-    $("#teach-step-title").textContent = `Repetition ${n + 1} of 3`;
+    $("#teach-step-title").textContent = tr("repetitionN", { number: n + 1 });
     const hint = $("#teach-hint");
     if (c.deadMic) {
-      $("#teach-step-sub").textContent = "No sound from the microphone.";
-      hint.textContent = "Is it muted, or being used by another app?";
+      $("#teach-step-sub").textContent = tr("noSoundMic");
+      hint.textContent = tr("checkMuted");
     } else if (c.hearing) {
-      $("#teach-step-sub").textContent = `Hearing you — finish the ${ORD[n]} repetition, then pause.`;
+      $("#teach-step-sub").textContent = tr("finishNth", { ordinal: tr(ORD[n]) });
       hint.textContent = "";
     } else {
-      $("#teach-step-sub").textContent = `Chant ${S.mantra} once now.`;
-      hint.textContent = c.repVoiceS > 0 ? "Waiting for the pause that ends this repetition…" : "Then pause — I'll move on automatically.";
+      $("#teach-step-sub").textContent = tr("chantOnce", { mantra: S.mantra });
+      hint.textContent = c.repVoiceS > 0 ? tr("waitingPause") : tr("pauseMoveOn");
     }
   }
 
@@ -410,9 +428,9 @@
     Chime.vibrate([30]);
     setRepSteps(r.captured, false);
     gotItUntil = Date.now() + 900;
-    $("#teach-step-title").textContent = r.captured >= 3 ? "Got all 3 ✓" : `Got it ✓`;
-    $("#teach-step-sub").textContent = r.captured >= 3 ? "Recording stopped. Learning your mantra…" : `Repetition ${r.captured} recorded. Now the ${ORD[r.captured]}…`;
-    if (r.captured >= 3) setRec("stopped", "Recording stopped");
+    $("#teach-step-title").textContent = r.captured >= 3 ? tr("gotAll") : tr("gotIt");
+    $("#teach-step-sub").textContent = r.captured >= 3 ? tr("recordingStoppedLearning") : tr("repetitionRecordedNext", { number: r.captured, ordinal: tr(ORD[r.captured]) });
+    if (r.captured >= 3) setRec("stopped", tr("recordingStopped"));
   }
 
   function drawWave() {
@@ -430,17 +448,9 @@
     }
   }
 
-  const REASONS = {
-    no_voice: ["I couldn't hear you", "Check that the microphone isn't muted, move a little closer, and chant at your normal volume."],
-    too_short: ["That was very short", "Chant the mantra 3 times, with a short breath between each."],
-    too_little_voice: ["I need a little more", "Chant the full mantra 3 times, with a short breath between each."],
-    need_more_reps: ["I need at least 2 repetitions", "Chant the mantra once, pause for a second, and repeat — the screen shows each repetition as it's recorded."],
-    reps_differ: ["The repetitions sounded different", "Make sure each one is the complete mantra, chanted the same way. Let's record them again."]
-  };
-
   function onCalibDone(r) {
     teaching = false;
-    setRec("stopped", "Recording stopped");
+    setRec("stopped", tr("recordingStopped"));
     teachStep("result");
     const icon = $("#teach-result-icon");
     const play = $("#btn-teach-play");
@@ -448,24 +458,23 @@
       Store.Profiles.set(S.mantra, r.profile);
       icon.className = "step-icon ok";
       icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-      $("#teach-result-title").textContent = "Mantra learned";
-      const skipped = r.dropped ? ` (${r.dropped} sounded different and was skipped)` : "";
-      $("#teach-result-body").textContent =
-        `Learned from ${r.profile.nReps} repetitions, about ${r.profile.repSec.toFixed(1)} s of chanting each${skipped}. From now on each full repetition of ${S.mantra} adds one.`;
+      $("#teach-result-title").textContent = tr("learned");
+      const skipped = r.dropped ? tr("skipped", { count: r.dropped }) : "";
+      $("#teach-result-body").textContent = tr("learnedBody", { count: r.profile.nReps, seconds: r.profile.repSec.toFixed(1), skipped, mantra: S.mantra });
       play.hidden = !AudioEngine.hasLearnedAudio();
       $("#teach-play-hint").hidden = play.hidden;
-      $("#btn-teach-start").textContent = "Start chanting";
-      $("#btn-teach-again").textContent = "Teach again";
+      $("#btn-teach-start").textContent = tr("startChanting");
+      $("#btn-teach-again").textContent = tr("teachAgain");
       renderMain(); idleStatus(); refreshVoiceRow();
     } else {
-      const [title, body] = REASONS[r.reason] || REASONS.need_more_reps;
+      const reasonKeys = ({ no_voice: ["reasonNoVoiceTitle", "reasonNoVoiceBody"], too_short: ["reasonShortTitle", "reasonShortBody"], too_little_voice: ["reasonLittleTitle", "reasonLittleBody"], need_more_reps: ["reasonRepsTitle", "reasonRepsBody"], reps_differ: ["reasonDifferTitle", "reasonDifferBody"] })[r.reason] || ["reasonRepsTitle", "reasonRepsBody"];
       icon.className = "step-icon bad";
       icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg>';
-      $("#teach-result-title").textContent = title;
-      $("#teach-result-body").textContent = body;
+      $("#teach-result-title").textContent = tr(reasonKeys[0]);
+      $("#teach-result-body").textContent = tr(reasonKeys[1]);
       play.hidden = true; $("#teach-play-hint").hidden = true;
-      $("#btn-teach-start").textContent = "Try again";
-      $("#btn-teach-again").textContent = "Cancel";
+      $("#btn-teach-start").textContent = tr("tryAgain");
+      $("#btn-teach-again").textContent = tr("cancel");
       teach.dataset.failed = "1";
       return;
     }
@@ -495,9 +504,9 @@
   });
   $("#btn-teach-play").addEventListener("click", (e) => {
     const b = e.currentTarget;
-    if (b.dataset.playing === "1") { AudioEngine.stopPlayback(); b.dataset.playing = ""; b.querySelector("span").textContent = "Hear what I learned"; return; }
-    if (AudioEngine.playLearned(() => { b.dataset.playing = ""; b.querySelector("span").textContent = "Hear what I learned"; })) {
-      b.dataset.playing = "1"; b.querySelector("span").textContent = "Stop";
+    if (b.dataset.playing === "1") { AudioEngine.stopPlayback(); b.dataset.playing = ""; b.querySelector("span").textContent = tr("hearLearned"); return; }
+    if (AudioEngine.playLearned(() => { b.dataset.playing = ""; b.querySelector("span").textContent = tr("hearLearned"); })) {
+      b.dataset.playing = "1"; b.querySelector("span").textContent = tr("stop");
     }
   });
 
@@ -519,9 +528,9 @@
       const learned = DSP.profileOk(profiles[m.name]);
       b.innerHTML = '<svg class="mr-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' +
         '<span class="mr-text"><span class="mr-name"></span><span class="mr-dev"></span></span>' +
-        `<span class="mr-badge${learned ? "" : " todo"}">${learned ? "Voice learned" : "Not taught"}</span>`;
+        `<span class="mr-badge${learned ? "" : " todo"}">${learned ? tr("voiceLearned") : tr("notTaught")}</span>`;
       b.querySelector(".mr-name").textContent = m.name;
-      b.querySelector(".mr-dev").textContent = m.dev || (m.custom ? "Your mantra" : "");
+      b.querySelector(".mr-dev").textContent = m.dev || (m.custom ? tr("yourMantra") : "");
       li.appendChild(b);
       list.appendChild(li);
     }
@@ -565,11 +574,12 @@
   }
   function refreshVoiceRow() {
     const p = profile();
-    $("#voice-state").textContent = p ? `“${S.mantra}” learned` : `“${S.mantra}” not taught yet`;
-    $("#voice-sub").textContent = p ? `${p.nReps} repetitions · ${new Date(p.savedAt || Date.now()).toLocaleDateString()}` : "Needed for hands-free counting";
-    $("#btn-reteach").textContent = p ? "Teach again" : "Teach now";
+    $("#voice-state").textContent = p ? tr("voiceStateLearned", { mantra: S.mantra }) : tr("voiceStateUntaught", { mantra: S.mantra });
+    $("#voice-sub").textContent = p ? tr("repetitionsDate", { count: p.nReps, date: new Date(p.savedAt || Date.now()).toLocaleDateString(I18n.language === "hi" ? "hi-IN" : "en-US") }) : tr("neededHandsFree");
+    $("#btn-reteach").textContent = p ? tr("teachAgain") : tr("teachNow");
   }
   function renderSettings() {
+    document.querySelectorAll("#seg-language button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.v === S.language)));
     markSeg("#seg-target", S.target);
     markSeg("#seg-sens", S.sensitivity);
     const sw = $("#swatches");
@@ -596,6 +606,18 @@
   }
 
   $("#btn-settings").addEventListener("click", () => { renderSettings(); showSheet("#sheet-settings"); });
+  $("#seg-language").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b || !["en", "hi"].includes(b.dataset.v)) return;
+    S.language = b.dataset.v;
+    Store.Settings.save(S);
+    I18n.setLanguage(S.language);
+    renderMantra(); renderCount(false); renderStreak(); renderMain();
+    if (mode === "running") setStatus(tr("listening"), "listening");
+    else idleStatus();
+    if (mode === "done" && doneData) renderCompletion(doneData);
+    setDetails("");
+    renderSettings();
+  });
   $("#seg-target").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
     S.target = Number(b.dataset.v);
@@ -624,20 +646,20 @@
   bindToggle("#opt-sound", "soundOn");
   bindToggle("#opt-vibrate", "vibrateOn", () => S.vibrateOn && Chime.vibrate([30]));
   bindToggle("#opt-details", "showDetails", () => {
-    setDetails(S.showDetails ? "details on" : "");
+    setDetails(S.showDetails ? tr("detailsOn") : "");
     AudioEngine.setDebug(S.showDetails);
     $("#btn-debug").hidden = !S.showDetails;
   });
   $("#btn-debug").addEventListener("click", () => {
     const out = AudioEngine.exportDebug(profile());
-    if (!out) { toast("Nothing recorded yet — teach or chant first"); return; }
+    if (!out) { toast(tr("nothingRecorded")); return; }
     out.files.forEach((f, i) => setTimeout(() => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(f.blob); a.download = f.name;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     }, i * 400));
-    toast("Saved to your device — nothing was uploaded");
+    toast(tr("savedLocal"));
   });
   $("#btn-reteach").addEventListener("click", () => { hideSheet(true); openTeach(); });
 
@@ -645,18 +667,18 @@
   $("#btn-share").addEventListener("click", async () => {
     if (!doneCard) return;
     const r = await Share.shareCard(doneCard, Share.message(doneData));
-    if (r === "downloaded") toast("Image saved");
+    if (r === "downloaded") toast(tr("imageSaved"));
   });
   $("#btn-wa").addEventListener("click", () => {
     if (!doneData) return;
     window.open(Share.whatsappUrl(Share.message(doneData)), "_blank", "noopener");
   });
-  $("#btn-save").addEventListener("click", () => { if (doneCard) { Share.download(doneCard); toast("Image saved"); } });
+  $("#btn-save").addEventListener("click", () => { if (doneCard) { Share.download(doneCard); toast(tr("imageSaved")); } });
   $("#btn-again").addEventListener("click", () => { hideSheet(true); newMala(); startListening(); });
 
   /* ---------------- reset ---------------- */
   $("#btn-reset").addEventListener("click", () => {
-    if (count === 0) { toast("Count is already 0"); return; }
+    if (count === 0) { toast(tr("countAlreadyZero")); return; }
     showSheet("#sheet-confirm");
   });
   $("#btn-confirm-yes").addEventListener("click", () => {
@@ -664,28 +686,28 @@
     const wasRunning = mode === "running";
     newMala();
     if (!wasRunning) { mode = "idle"; renderMain(); idleStatus(); }
-    toast("Count reset");
+    toast(tr("countReset"));
   });
 
   /* ---------------- mic errors ---------------- */
   async function showMicError(e) {
     const code = (e && e.code) || (e && e.name) || "";
-    let title = "Microphone needed", html;
+    let title = tr("micNeeded"), html;
     if (code === "denied" || code === "NotAllowedError") {
-      html = "<p>Jap Counter needs the microphone to count your chants hands-free. It's processed on this device only.</p>" +
-        "<ol><li>Tap the lock / settings icon next to the address bar.</li><li>Set <b>Microphone</b> to <b>Allow</b>.</li><li>Come back and tap <b>Try again</b>.</li></ol>" +
-        "<p class='tiny'>On iPhone: Settings ▸ Safari ▸ Microphone ▸ Allow. On Android: Chrome ▸ Site settings ▸ Microphone.</p>";
+      html = `<p>${tr("micDeniedBody")}</p>` +
+        `<ol><li>${tr("micPermissionStep1")}</li><li>${tr("micPermissionStep2")}</li><li>${tr("micPermissionStep3")}</li></ol>` +
+        `<p class='tiny'>${tr("iphoneMic")}</p>`;
     } else if (code === "insecure") {
-      title = "Open over https";
-      html = "<p>Browsers only allow the microphone on secure pages. Open this app with an <b>https://</b> address (or <b>localhost</b> during development).</p>";
+      title = tr("openHttps");
+      html = `<p>${tr("secureMicBody")}</p>`;
     } else if (code === "nomic" || code === "NotFoundError") {
-      title = "No microphone found";
-      html = "<p>Connect a microphone (or check that your headset is switched on) and try again.</p>";
+      title = tr("noMicFound");
+      html = `<p>${tr("noMicBody")}</p>`;
     } else if (code === "ended") {
-      title = "Microphone stopped";
-      html = "<p>The system took the microphone away — perhaps a call or another app. Tap <b>Try again</b> to continue.</p>";
+      title = tr("micStopped");
+      html = `<p>${tr("micEndedBody")}</p>`;
     } else {
-      html = "<p>The microphone couldn't be started. Close other apps that may be using it, then try again.</p>";
+      html = `<p>${tr("micGenericBody")}</p>`;
     }
     $("#err-title").textContent = title;
     $("#err-body").innerHTML = html;
@@ -733,6 +755,7 @@
 
   /* ---------------- boot ---------------- */
   function init() {
+    I18n.setLanguage(S.language);
     Themes.apply(Themes.byId(S.theme));
     AudioEngine.setDebug(S.showDetails);
     loadCountFor(S.mantra);

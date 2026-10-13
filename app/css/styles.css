@@ -18,6 +18,12 @@
   --radius:18px;
   color-scheme:light;
 }
+html[lang="hi"]{
+  /* Let Latin glyphs (including digits) keep their normal UI/display fonts;
+     Devanagari glyphs fall through to the Hindi font in the same stack. */
+  --serif:'Cormorant Garamond', 'Tiro Devanagari Sanskrit', 'Noto Serif Devanagari', Georgia, 'Times New Roman', serif;
+  --sans:'Plus Jakarta Sans', 'Tiro Devanagari Sanskrit', 'Noto Serif Devanagari', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
 
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body{ margin:0; height:100%; }

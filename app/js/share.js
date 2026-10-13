@@ -34,7 +34,7 @@ window.Share = (function () {
     c.fillText(String(o.count), cx, cy + 30);   // Cormorant figures descend: keep clear of the label
     c.fillStyle = soft;
     c.font = "500 40px 'Plus Jakarta Sans', system-ui, sans-serif";
-    c.fillText(o.count === 1 ? "CHANT" : "CHANTS", cx, cy + 150);
+    c.fillText(I18n.t(o.count === 1 ? "chantLabel" : "chantsLabel"), cx, cy + 150);
 
     c.fillStyle = t.accent;
     c.font = "italic 600 64px 'Cormorant Garamond', Georgia, serif";
@@ -43,13 +43,13 @@ window.Share = (function () {
 
     c.fillStyle = soft;
     c.font = "500 38px 'Plus Jakarta Sans', system-ui, sans-serif";
-    const bits = [`${o.minutes} min`];
-    if (o.streak > 0) bits.push(`${o.streak}-day streak`);
+    const bits = [I18n.t("inMinutes", { minutes: o.minutes })];
+    if (o.streak > 0) bits.push(I18n.t("streakDays", { count: o.streak }));
     c.fillText(bits.join("   ·   "), cx, y + 30);
 
     c.fillStyle = hexA(t.text, 0.45);
     c.font = "500 30px 'Plus Jakarta Sans', system-ui, sans-serif";
-    c.fillText("Counted hands-free · Jap Counter", cx, H - 70);
+    c.fillText(I18n.t("shareFooter"), cx, H - 70);
     return cv;
   }
 
@@ -70,11 +70,11 @@ window.Share = (function () {
   }
 
   function message(o) {
-    const bits = [`I completed ${o.count} chants of ${o.mantra}`];
-    if (o.minutes) bits.push(`in ${o.minutes} min`);
-    let s = "🪔 " + bits.join(" ") + ".";
-    if (o.streak > 1) s += ` 🔥 ${o.streak}-day streak.`;
-    return s + "\nCounted hands-free with Jap Counter.";
+    let s = "🪔 " + I18n.t("completedShare", { count: o.count, mantra: o.mantra });
+    if (o.minutes) s += " " + I18n.t("inMinutes", { minutes: o.minutes });
+    s += ".";
+    if (o.streak > 1) s += " 🔥 " + I18n.t("streakDays", { count: o.streak }) + ".";
+    return s + "\n" + I18n.t("shareFooter");
   }
 
   function whatsappUrl(text) { return "https://wa.me/?text=" + encodeURIComponent(text); }

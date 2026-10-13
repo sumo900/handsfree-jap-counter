@@ -28,6 +28,7 @@ window.Store = (function () {
   const Settings = {
     defaults: {
       theme: "sattvic",
+      language: null,
       mantra: "Om Namah Shivaya",
       target: 108,
       sensitivity: 1,        // 0.92 strict · 1 balanced · 1.15 lenient
@@ -38,6 +39,10 @@ window.Store = (function () {
     },
     load() {
       const s = Object.assign({}, this.defaults, read(SET_KEY, {}));
+      if (s.language !== "en" && s.language !== "hi") {
+        const browserLanguage = (navigator.languages && navigator.languages[0]) || navigator.language || "en";
+        s.language = /^hi(?:-|$)/i.test(browserLanguage) ? "hi" : "en";
+      }
       delete s.calibrate;    // legacy (pre-v4 engine) profile — no longer used
       if (s.sensitivity === 0.85) s.sensitivity = 0.92;   // Strict was retuned on a real voice
       return s;
